@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#132f31">
+<title>Chùa Đêm 3D · Một ngày an yên</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+<script defer src="vendor/three.min.js"></script>
+<script defer src="software.js"></script>
+<script defer src="ride-config.js"></script>
+<script defer src="expansion-world.js"></script>
+<script defer src="world.js"></script>
+<script defer src="caro.js"></script>
+<script defer src="online.js"></script>
+<script defer src="game.js"></script>
+</head>
+<body>
+<main id="game">
+  <audio id="background-music" src="assets/background-music.mp3" preload="none" loop></audio>
+  <audio id="wooden-fish" src="assets/wooden-fish.mp3" preload="auto"></audio>
+  <div id="view" aria-label="Thế giới 3D của game Chùa Đêm"></div>
+  <header class="top">
+    <div class="brand"><span aria-hidden="true">◈</span><div>CHÙA ĐÊM <b>3D</b><small>MỘT NGÀY AN YÊN</small></div></div>
+    <div class="top-buttons">
+      <button id="sound" type="button" aria-pressed="false" title="Bật hoặc tắt hiệu ứng âm thanh">◖ <span>Hiệu ứng</span></button>
+      <button id="music" type="button" aria-pressed="false" title="Bật hoặc tắt nhạc nền">♫ <span>Nhạc nền</span></button>
+      <button id="edit" type="button">Nhân vật</button>
+      <button id="room-open" type="button">Chơi chung</button>
+    </div>
+  </header>
+  <aside class="journal" id="journal">
+    <div class="journal-title"><span>NHẬT KÝ GHÉ CHÙA</span><strong id="count">0/10</strong></div>
+    <p id="guide">Qua cổng và làm quen với Thích Trung Hiếu ở sân chùa.</p>
+    <ul id="tasks"><li data-task="meet">Trò chuyện với Thích Trung Hiếu</li><li data-task="lotus">Thắp đèn sen</li><li data-task="bell">Gõ mõ 3 lần</li><li data-task="breath">Hít thở một vòng</li><li data-task="incense">Dâng hương</li><li data-task="escort">Theo Thích Trung Hiếu đến ao cá</li><li data-task="fish">Câu được một con cá</li><li data-task="meditate">Ngồi thiền trong chánh điện</li><li data-task="caro">Hoàn thành một ván caro</li><li data-task="coaster">Đi trọn vòng tàu lượn</li></ul>
+  </aside>
+  <div class="place" id="place">CỔNG CHÙA</div>
+  <div id="room-count" class="room-count" hidden></div>
+  <div id="activity-hud" class="activity-hud" hidden><span id="activity-text"></span><button id="activity-stop" type="button">Rời chỗ</button></div>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <div class="touch-controls" aria-label="Di chuyển">
+    <button type="button" data-move="KeyW" aria-label="Tiến">↑</button>
+    <button type="button" data-move="KeyA" aria-label="Trái">←</button>
+    <button type="button" data-move="KeyS" aria-label="Lùi">↓</button>
+    <button type="button" data-move="KeyD" aria-label="Phải">→</button>
+  </div>
+  <div class="prompt"><button id="interact" type="button" hidden><kbd>E</kbd><span></span></button></div>
+  <footer class="controls"><span><kbd>WASD</kbd> hoặc nhấp đất để đi</span><span><kbd>E</kbd> Tương tác</span><span>Kéo chuột để xoay camera</span><button id="recenter" type="button" title="Đưa camera về hướng chính">⟳ Góc nhìn</button></footer>
+  <dialog id="creator" class="panel">
+    <form id="profile">
+      <p class="eyebrow">CHÙA ĐÊM 3D</p>
+      <h1 id="creator-title">Tạo nhân vật</h1>
+      <p class="intro">Chọn diện mạo rồi ghé chùa dưới ánh chiều.</p>
+      <label for="nickname">Tên nhân vật</label>
+      <input id="nickname" name="nickname" placeholder="Ví dụ Minh An" maxlength="20" autocomplete="off">
+      <label for="hair">Kiểu tóc</label>
+      <select id="hair" name="hair"><option value="short">Tóc ngắn</option><option value="bun">Tóc búi</option><option value="long">Tóc dài</option></select>
+      <label for="skin">Màu da</label>
+      <select id="skin" name="skin"><option value="peach">Sáng</option><option value="gold">Ấm</option><option value="brown">Nâu</option></select>
+      <fieldset><legend>Màu áo</legend><div class="swatches">
+        <label><input type="radio" name="outfit" value="jade" checked><span style="--swatch:#479d88" title="Xanh ngọc">Xanh ngọc</span></label>
+        <label><input type="radio" name="outfit" value="coral"><span style="--swatch:#cb6a5d" title="Đỏ san hô">Đỏ san hô</span></label>
+        <label><input type="radio" name="outfit" value="cream"><span style="--swatch:#e7c48a" title="Vàng kem">Vàng kem</span></label>
+        <label><input type="radio" name="outfit" value="purple"><span style="--swatch:#8e7ab5" title="Tím nhạt">Tím nhạt</span></label>
+      </div></fieldset>
+      <button class="primary" type="submit" id="enter">Vào sân chùa <span aria-hidden="true">→</span></button>
+      <p id="error" role="alert" hidden></p>
+    </form>
+  </dialog>
+  <dialog id="event" class="panel event">
+    <p id="event-tag" class="eyebrow"></p>
+    <h2 id="event-title"></h2>
+    <p id="event-text"></p>
+    <div id="breathing" class="breathing" hidden><div class="breath-ring"></div><strong id="breath-time"></strong></div>
+    <div id="choices"></div>
+    <button type="button" class="back" id="close-event">Quay lại</button>
+  </dialog>
+  <dialog id="room-dialog" class="panel">
+    <form id="room-form">
+      <p class="eyebrow">PHÒNG CHÙA ĐÊM · TỐI ĐA 100 NGƯỜI</p>
+      <h2>Chơi chung</h2>
+      <p id="room-status" role="status">Chơi đơn</p>
+      <label for="room-url">Địa chỉ máy chủ</label>
+      <input type="url" id="room-url" placeholder="wss://may-chu.example/room" required>
+      <label for="room-code">Mã phòng</label>
+      <input type="text" id="room-code" value="CHUA-DEM" minlength="3" maxlength="16" required>
+      <button class="primary" type="submit">Vào phòng</button>
+      <button type="button" class="back" id="room-leave">Rời phòng</button>
+      <button type="button" class="back" id="room-close">Đóng</button>
+    </form>
+  </dialog>
+  <noscript>Hãy bật JavaScript để chơi Chùa Đêm 3D.</noscript>
+</main>
+</body>
+</html>
