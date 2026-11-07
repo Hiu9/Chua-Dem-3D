@@ -28,9 +28,16 @@ function profileFrom(source) {
   };
 }
 
+// Daily journal follows Vietnam midnight regardless of the device timezone.
+function gameDay(now = Date.now()) {
+  return new Date(now + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
 const saved = load();
+let taskDay = gameDay();
+// Migrate undated progress from older builds as today's progress.
+const savedTasks = !saved.taskDay || saved.taskDay === taskDay ? saved.tasks : [];
 let profile = profileFrom(saved.profile || {});
-const tasks = new Set(taskList.map((item) => item.dataset.task).filter((id) => Array.isArray(saved.tasks) && saved.tasks.includes(id)));
+const tasks = new Set(taskList.map((item) => item.dataset.task).filter((id) => Array.isArray(savedTasks) && savedTasks.includes(id)));
 let started = false;
 let active;
 let breathStart = null;
@@ -43,7 +50,7 @@ let joinSeat;
 let nearbyPose;
 let bellCount = 0;
 let toastTimer;
-let muted = true;
+let muted = false;
 let audio;
 let drag;
 let yaw = 0;
@@ -66,7 +73,7 @@ const hints = {
 };
 
 function save() {
-  try { localStorage.setItem(storageKey, JSON.stringify({ profile, tasks: [...tasks] })); }
+  try { localStorage.setItem(storageKey, JSON.stringify({ profile, taskDay, tasks: [...tasks] })); }
   catch { /* The current session remains playable. */ }
 }
 
@@ -89,8 +96,11 @@ const online = createOnlineRoom({
   },
   joined() { if (roomDialog.open) roomDialog.close(); },
   receive(players) { world?.expansion.setGuests(players); },
-  disconnected() { if (seat) stopSeat(false); }
+  disconnected() { if (seat) stopSeat(false); window.dispatchEvent(new CustomEvent('room-left')); },
+  message(message) { window.dispatchEvent(new CustomEvent('room-message', {detail:message})); }
 });
+const social = createSocial({ online, notify, clearMovement });
+const caroOnline = createCaroOnline({online,notify,clearMovement,onFinish:()=>complete('caro')});
 if (world) startGame();
 
 byId('room-open').addEventListener('click', () => {
@@ -151,35 +161,32 @@ function startGame() {
     notify('Đi theo Thích Trung Hiếu. Thầy sẽ chờ nếu bạn đi chậm.');
   };
 
+  const guideHome = { x:guestStation.x, z:guestStation.z, angle:expansion.npc.root.rotation.y };
   function followGuide(dt) {
     if (!escort) return;
-    const npc = expansion.npc;
-    const point = npc.root.position;
-    const goal = guideRoute[escort.index];
+    const npc = expansion.npc, point = npc.root.position;
+    const returning = Boolean(escort.returning);
+    const goal = escort.index < 0 ? [guideHome.x,guideHome.z] : guideRoute[escort.index];
     const gap = point.distanceTo(position);
-    const x = goal[0] - point.x, z = goal[1] - point.z;
-    const length = Math.hypot(x, z);
-    if (gap < 9 && length > .11) {
-      const step = Math.min(length, dt * 3.12);
-      point.x += x * step / length;
-      point.z += z * step / length;
-      npc.root.rotation.y = Math.atan2(x, z);
-      npc.limbs.forEach(({ arm, leg, side }) => {
-        leg.rotation.x = Math.sin(walkClock) * side * .43;
-        arm.rotation.x = -leg.rotation.x * .64;
-      });
-    } else {
-      npc.limbs.forEach(({ arm, leg }) => { leg.rotation.x = arm.rotation.x = 0; });
+    const x = goal[0]-point.x, z = goal[1]-point.z, length = Math.hypot(x,z);
+    if ((returning || gap < 9) && length > .11) {
+      const step=Math.min(length,dt*3.12);
+      point.x+=x*step/length;point.z+=z*step/length;
+      npc.root.rotation.y=Math.atan2(x,z);
+      npc.limbs.forEach(({arm,leg,side})=>{leg.rotation.x=Math.sin(walkClock)*side*.43;arm.rotation.x=-leg.rotation.x*.64;});
+    } else npc.limbs.forEach(({arm,leg})=>{leg.rotation.x=arm.rotation.x=0;});
+    if(length<=.11){
+      if(returning){
+        if(escort.index>=0)escort.index--;
+        else {point.set(guideHome.x,0,guideHome.z);npc.root.rotation.y=guideHome.angle;escort=undefined;npc.limbs.forEach(({arm,leg})=>{leg.rotation.x=arm.rotation.x=0;});}
+      }else if(escort.index<guideRoute.length-1)escort.index++;
+      else if(gap<3.8){
+        escort={returning:true,index:guideRoute.length-2};
+        complete('escort');notify('Đã đến ao cá. Thích Trung Hiếu sẽ về sân chùa; bạn có thể ở lại câu cá.');
+      }
     }
-    if (length <= .11 && escort.index < guideRoute.length - 1) escort.index++;
-    else if (length <= .11 && gap < 3.8) {
-      escort = undefined;
-      complete('escort');
-      notify('Đã đến ao câu cá. Đến gần cầu gỗ và bấm Câu cá.');
-    }
-    guestStation.x = point.x;
-    guestStation.z = point.z;
-    guestStation.sign.position.set(point.x, 2.12, point.z);
+    guestStation.x=point.x;guestStation.z=point.z;
+    guestStation.sign.position.set(point.x,2.12,point.z);
   }
 
   joinSeat = (kind) => {
@@ -199,6 +206,7 @@ function startGame() {
       if (index < 0) { notify('Chưa giữ được chỗ. Hãy thử lại.'); return; }
       if (!eventDialog.open || byId('event-tag').textContent !== eventTag) { online.release(); return; }
       seat = { kind, index, start: performance.now(), ride, progress: 0 };
+      if (kind === 'ride' && !muted) { seat.audioStarted=true; playRideAudio(); }
       if (kind === 'meditation') {
         const spot = meditationSeats[index];
         setPlayer(spot.x, spot.z, Math.PI);
@@ -216,6 +224,7 @@ function startGame() {
     const { kind, index, start, ride, progress } = seat;
     if (kind === 'ride') {
       wasRiding = true;
+      if (!muted && !seat.audioStarted && clock >= ride.departure) { seat.audioStarted=true; playRideAudio(); }
       const pose = expansion.rideSeat(index);
       avatar.root.position.copy(pose.position);
       avatar.root.rotation.y = pose.facing;
@@ -231,7 +240,7 @@ function startGame() {
     } else {
       const remaining = Math.max(0, Math.ceil((12000 - (now - start)) / 1000));
       byId('activity-text').textContent = 'Đệm ' + (index + 1) + '/100 · ' + (remaining ? 'Thiền thêm ' + remaining + ' giây' : 'Đã hoàn thành');
-      if (!remaining) complete('meditate');
+      if (!remaining && !seat.completed) { seat.completed=true; complete('meditate'); }
     }
     avatar.body.position.y = -.34;
     avatar.limbs.forEach(({ leg, arm, side }) => {
@@ -296,6 +305,7 @@ function startGame() {
   updateJournal();
 
   function handleMovement(dt) {
+    if (social.blocked()) { clearMovement(); return; }
     const held = (code) => keys.has(code) || [...touchKeys.values()].includes(code);
     let forward = Number(held('KeyW') || held('ArrowUp')) - Number(held('KeyS') || held('ArrowDown'));
     let sideways = Number(held('KeyD') || held('ArrowRight')) - Number(held('KeyA') || held('ArrowLeft'));
@@ -382,6 +392,7 @@ function startGame() {
   function updateLocation() {
     const nextZone = seat?.kind === 'ride' ? 'TÀU LƯỢN'
       : indoor ? 'CHÁNH ĐIỆN'
+      : Math.abs(position.x-17)<6 && Math.abs(position.z+46)<7 ? 'BUI’S HOUSE'
       : position.z < -35 ? 'VƯỜN SAU · AO CÁ'
       : Math.hypot(position.x - rideStation.x, position.z - rideStation.z) < 4 ? 'GA HỒ SEN'
       : position.x < -16 && position.z > -3 ? 'KHU CỜ CARO'
@@ -392,7 +403,7 @@ function startGame() {
     }
     let nearest;
     let distance = Infinity;
-    if (started && !seat && !creator.open && !eventDialog.open && !roomDialog.open) {
+    if (started && !seat && !creator.open && !eventDialog.open && !roomDialog.open && !social.blocked()) {
       for (const station of world.stations) {
         if (Boolean(station.indoor) !== indoor || (escort && station.id === 'meet')) continue;
         if (station.id === 'meditate') {
@@ -460,15 +471,34 @@ function clearMovement() {
   moveButtons.forEach((button) => button.classList.remove('active'));
 }
 
+function resetDailyTasks() {
+  const today = gameDay();
+  if (today === taskDay) return false;
+  taskDay = today;
+  tasks.clear();
+  bellCount = 0;
+  save();
+  updateJournal();
+  if (eventDialog.open && byId('event-tag').textContent === 'SÂN GÕ MÕ') {
+    const button = byId('choices').querySelector('button');
+    if (button) button.textContent = 'Gõ mõ · 0/3';
+    byId('event-text').textContent = 'Ngày mới: gõ ba tiếng để hoàn thành nhiệm vụ hôm nay.';
+  }
+  if (started) notify('Ngày mới! 10 nhiệm vụ đã làm mới theo giờ Việt Nam.');
+  return true;
+}
+
 function updateJournal() {
   byId('count').textContent = tasks.size + '/' + taskList.length;
   taskList.forEach((item) => item.classList.toggle('done', tasks.has(item.dataset.task)));
   const next = taskList.find((item) => !tasks.has(item.dataset.task));
   byId('guide').textContent = next ? hints[next.dataset.task] : 'Bạn đã hoàn thành một ngày an yên.';
-  world.restoreActivities(tasks);
+  world?.restoreActivities(tasks);
 }
 
 function complete(id) {
+  resetDailyTasks();
+  if (!muted) { const clip = byId('completion'); clip.currentTime = 0; clip.volume = .8; clip.play().catch(() => {}); }
   if (tasks.has(id)) return;
   tasks.add(id);
   save();
@@ -493,6 +523,12 @@ function playTone(notes) {
   });
 }
 
+// Unlock synthesized effects after the first user gesture.
+window.addEventListener('pointerdown', async () => {
+  if (muted) return;
+  try { audio ??= new AudioContext(); await audio.resume(); } catch { /* File effects remain usable. */ }
+}, { once:true });
+
 const sound = byId('sound');
 sound.addEventListener('click', async () => {
   muted = !muted;
@@ -508,28 +544,37 @@ sound.addEventListener('click', async () => {
   }
   sound.setAttribute('aria-pressed', String(!muted));
   sound.title = muted ? 'Bật hiệu ứng âm thanh' : 'Tắt hiệu ứng âm thanh';
-  if (muted) byId('wooden-fish').pause();
+  if (muted) { byId('wooden-fish').pause(); byId('completion').pause(); byId('coaster-audio').pause(); }
+  else if (seat?.kind === 'ride') playRideAudio(false);
 });
 
 const musicButton = byId('music');
 const backgroundMusic = byId('background-music');
 backgroundMusic.volume = .38;
-musicButton.addEventListener('click', async () => {
-  if (!backgroundMusic.paused) {
-    backgroundMusic.pause();
-    return;
-  }
-  try { await backgroundMusic.play(); }
-  catch (error) {
-    if (error.name !== 'AbortError') notify('Chưa phát được nhạc nền. Hãy thử bật lại.');
-  }
+musicButton.addEventListener('click', () => {
+  byId('music-menu').hidden = !byId('music-menu').hidden;
 });
+document.querySelectorAll('[data-track]').forEach(button => button.addEventListener('click', async () => {
+  const file = 'assets/' + button.dataset.track + '.mp3';
+  if (backgroundMusic.getAttribute('src') !== file) { backgroundMusic.pause(); backgroundMusic.src = file; }
+  try { await backgroundMusic.play(); } catch { notify('Chưa phát được nhạc. Hãy thử lại.'); }
+  byId('music-menu').hidden = true;
+}));
+byId('music-off').onclick = () => { backgroundMusic.pause(); byId('music-menu').hidden = true; };
+byId('sound').setAttribute('aria-pressed', 'true');
 function syncMusicButton() {
   musicButton.setAttribute('aria-pressed', String(!backgroundMusic.paused));
   musicButton.title = backgroundMusic.paused ? 'Bật nhạc nền' : 'Tắt nhạc nền';
 }
 backgroundMusic.addEventListener('play', syncMusicButton);
 backgroundMusic.addEventListener('pause', syncMusicButton);
+
+function playRideAudio(restart = true) {
+  const clip=byId('coaster-audio');
+  if(restart) clip.currentTime=0;
+  clip.volume=.65;
+  clip.play().catch(()=>{});
+}
 
 function playWoodenFish() {
   if (muted) return;
@@ -559,8 +604,10 @@ function showEvent(tag, title, text, choices = []) {
 }
 
 function activity() {
+  resetDailyTasks();
   if (!active || creator.open || eventDialog.open) return;
   switch (active.id) {
+    case 'house': social.openCards(); break;
     case 'meet':
       showEvent('SÂN CHÙA', 'Thích Trung Hiếu', 'Chào ' + profile.nickname + '! Bạn muốn ghé đâu trước?', [
         ['Hồ sen ở đâu?', () => {
@@ -592,10 +639,11 @@ function activity() {
     case 'bell':
       showEvent('SÂN GÕ MÕ', 'Gõ mõ', 'Gõ ba tiếng để hoàn thành hoạt động. Bạn có thể gõ tiếp để nghe âm thanh.', [
         ['Gõ mõ · ' + Math.min(bellCount, 3) + '/3', (event) => {
+          resetDailyTasks();
           bellCount++;
           playWoodenFish();
           event.currentTarget.textContent = 'Gõ mõ · ' + Math.min(bellCount, 3) + '/3';
-          if (bellCount >= 3) {
+          if (bellCount === 3) {
             complete('bell');
             byId('event-text').textContent = 'Đã hoàn thành. Bạn có thể gõ thêm hoặc quay lại sân.';
           }
@@ -612,7 +660,8 @@ function activity() {
       break;
     case 'caro':
       showEvent('VƯỜN CỜ', 'Thích Thể Hiện', 'Độ khó vừa. Bạn cầm X và đi trước. Xếp ít nhất năm quân liền nhau theo hàng, cột hoặc đường chéo.', [
-        ['Bắt đầu ván cờ', (event) => playCaro(() => complete('caro'), event)]
+        ['Đánh với Thích Thể Hiện (NPC)', (event) => playCaro(() => complete('caro'), event)],
+        ['Đánh với người thật · 1 đấu 1', () => { if(!online.running()){byId('event-text').textContent='Vào Chơi chung và nhập cùng mã phòng với bạn của bạn trước.';return;} eventDialog.close(); caroOnline.open(); }]
       ]);
       break;
     case 'coaster':
@@ -687,6 +736,8 @@ function updateTrainDialog(clock) {
 }
 
 function stopSeat(release = true) {
+  byId('coaster-audio').pause();
+  byId('coaster-audio').currentTime=0;
   seat = undefined;
   if (release) online.release();
   activityHud.hidden = true;
@@ -725,7 +776,7 @@ eventDialog.addEventListener('close', () => {
 });
 const movement = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 window.addEventListener('keydown', (event) => {
-  if (!started || seat || creator.open || eventDialog.open || roomDialog.open) return;
+  if (!started || seat || creator.open || eventDialog.open || roomDialog.open || social.blocked() || /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return;
   if (movement.has(event.code)) {
     keys.add(event.code);
     event.preventDefault();
@@ -735,6 +786,7 @@ window.addEventListener('keydown', (event) => {
 window.addEventListener('keyup', (event) => keys.delete(event.code));
 window.addEventListener('blur', clearMovement);
 document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) resetDailyTasks();
   if (document.hidden) {
     clearMovement();
     if (breathStart !== null || fishing) eventDialog.close();
@@ -768,3 +820,8 @@ view.addEventListener('pointermove', (event) => {
 });
 view.addEventListener('lostpointercapture', () => { drag = undefined; });
 byId('recenter').addEventListener('click', () => { yaw = 0; view.focus(); });
+
+// Check during an open session and immediately after returning to the tab.
+save();
+setInterval(resetDailyTasks, 1000);
+window.addEventListener('focus', resetDailyTasks);

@@ -142,6 +142,44 @@ function buildActivitiesWorld({ T, scene, box, ball, tube, shape, material, roof
     trainAt(progress);
   }
 
+  // Bui's House: photo-inspired tiled porch, pink marble columns, gray glazing,
+  // red lanterns, wood furniture and yellow flowers. Open center is walkable.
+  const hx=17, hz=-46;
+  box(0xc7bda9,hx,.02,hz,11,.08,12);
+  box(0x292f30,hx,.07,-40.1,11,.10,.45);
+  for(let ix=0;ix<11;ix++)for(let iz=0;iz<12;iz++){
+    box((ix+iz)%2?0xe3dfd4:0xcac8c3,12+ix,.08,-40.5-iz,.94,.025,.94);
+  }
+  function houseWall(x,z,w,d){box(0xf2e6d1,x,2,z,w,4,d);block(x,z,w,d);}
+  houseWall(11.5,hz,.22,12);houseWall(22.5,hz,.22,12);houseWall(hx,-52,11,.24);
+  for(const x of [12.2,21.8]){
+    tube(0xe9d9cc,x,1.9,-40.7,.48,3.8,.48);block(x,-40.7,.52,.52);
+    for(let j=0;j<10;j++){const stripe=tube(0xc5877c,x,j*.32+.3,-40.7,.49,.065,.49);stripe.rotation.z=.15;}
+    tube(0xad7064,x,.2,-40.7,.75,.3,.75);tube(0xad7064,x,3.65,-40.7,.75,.3,.75);
+    lantern(x,2.7,-42.2);
+  }
+  const houseRoof=new T.Group();scene.add(houseRoof);
+  box(0xdcc7b2,hx,4.05,hz,11.6,.28,12.5,houseRoof);
+  box(0x8d929b,hx,4.28,hz,11.7,.14,12.6,houseRoof);
+  box(0xd8c2a2,hx,3.55,-40,11.2,.6,.25);
+  label("Bui's House",hx,3.58,-39.75,4.8);
+  // Two fixed glazed side panels leave a wide entrance down the center.
+  for(const x of [13.1,20.9]){
+    box(0x65817e,x,1.6,-43,2.5,3.0,.08);block(x,-43,2.5,.12);
+    for(const dx of [-1.25,1.25])box(0x555d60,x+dx,1.6,-43,.10,3.2,.13);
+    for(const y of [.12,3.15])box(0x555d60,x,y,-43,2.6,.12,.13);
+    for(let j=0;j<6;j++)box(0xd9dad1,x-1.1+j*.12,1.6,-43.1,.06,2.9,.08);
+  }
+  for(const x of [12.2,13.5,20.5,21.8]){
+    tube(0xa8573e,x,.26,-39.6,.52,.5,.52);block(x,-39.6,.52,.52);
+    for(let k=0;k<5;k++){const a=k*1.256;ball(0xf4be25,x+Math.sin(a)*.19,.65,-39.6+Math.cos(a)*.19,.18,.18,.18);}
+  }
+  box(0x784338,hx,.65,hz,2.8,1.3,2.8);box(0x276c53,hx,1.33,hz,2.9,.12,2.9);block(hx,hz,2.9,2.9);
+  for(const [x,z] of [[15,-46],[19,-46],[17,-48],[17,-44]]){
+    box(0x714136,x,.4,z,.8,.12,.8);box(0x714136,x,.2,z,.12,.4,.12);
+  }
+  box(0xb9a17c,19.7,.02,-37.7,3,.08,7);
+
   const guests = new Map();
   const outfits = [0x479d88, 0xcb6a5d, 0xe7c48a, 0x8e7ab5];
   function discardSign(guest) {
@@ -184,6 +222,7 @@ function buildActivitiesWorld({ T, scene, box, ball, tube, shape, material, roof
     }
   }
   function moveGuests(dt, nearby) {
+    houseRoof.visible = !nearby || Math.abs(nearby[0]-hx)>7 || Math.abs(nearby[1]-hz)>9;
     const ordered = [];
     for (const guest of guests.values()) {
       const { root, target, claim } = guest;
@@ -219,6 +258,7 @@ function buildActivitiesWorld({ T, scene, box, ball, tube, shape, material, roof
   return {
     npc, animate, rideSeat, setGuests, moveGuests,
     stations: [
+      { id: 'house', name: 'Chơi Tiến lên tại Bui’s House', label: 'BUI’S HOUSE · TIẾN LÊN', labelWidth: 4, x:17, z:-43.7, y:2.6, radius:3.6 },
       { id: 'fish', name: 'Câu cá', label: 'AO CÂU CÁ', x: 7.35, z: -40.18, y: 1.59, radius: 2.75 },
       { id: 'caro', name: 'Chơi caro với Thích Thể Hiện', label: 'THÍCH THỂ HIỆN · CARO', labelWidth: 3.15, x: -20.1, z: 4.65, y: 2.16, radius: 2.85 },
       { id: 'coaster', name: 'Lên tàu lượn', label: 'GA TÀU LƯỢN · 10 CHỖ', labelWidth: 3.3, x: rideStation.x, z: rideStation.z, y: 2.72, radius: rideStation.radius },

@@ -386,12 +386,11 @@ function createWorld(T, viewport) {
       x + radius < left || x - radius > right || z + radius < top || z - radius > bottom);
   }
 
+  const litLotusMaterial = new T.MeshStandardMaterial({ color: 0xffca79, emissive: 0xff8f32, emissiveIntensity: .72 });
   function restoreActivities(tasks) {
     incense.visible = tasks.has('incense');
     pondFlowers.forEach((center) => {
-      if (tasks.has('lotus')) {
-        if (center.material === material(0xc69764)) center.material = new T.MeshStandardMaterial({ color: 0xffca79, emissive: 0xff8f32, emissiveIntensity: .72 });
-      }
+      center.material = tasks.has('lotus') ? litLotusMaterial : material(0xc69764);
     });
   }
 

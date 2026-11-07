@@ -1,6 +1,6 @@
 'use strict';
 
-function createOnlineRoom({ update, receive, disconnected, joined }) {
+function createOnlineRoom({ update, receive, disconnected, joined, message: onMessage }) {
   let socket, playerId, sequence = 0, clockOffset = 0, lastSent = 0;
   let lastPose, currentRide;
   const requests = new Map();
@@ -49,6 +49,7 @@ function createOnlineRoom({ update, receive, disconnected, joined }) {
       if (socket !== connection) return;
       let message;
       try { message = JSON.parse(event.data); } catch { return; }
+      onMessage?.(message);
       if (message.type === 'error') {
         failure = message.text;
         update(failure);
@@ -115,5 +116,6 @@ function createOnlineRoom({ update, receive, disconnected, joined }) {
   function release() {
     if (running()) socket.send(JSON.stringify({ type: 'release' }));
   }
-  return { join, leave, pose, claim, release, running, ride: () => currentRide, clock: () => Date.now() + clockOffset };
+  function send(message) { if (running()) socket.send(JSON.stringify(message)); }
+  return { send, join, leave, pose, claim, release, running, ride: () => currentRide, clock: () => Date.now() + clockOffset };
 }

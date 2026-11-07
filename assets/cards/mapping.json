@@ -1,0 +1,626 @@
+[
+  {
+    "id": 0,
+    "rank": "3",
+    "suit": "spades",
+    "file": "card-00.png",
+    "source_box": [
+      173,
+      355,
+      240,
+      448
+    ]
+  },
+  {
+    "id": 1,
+    "rank": "3",
+    "suit": "clubs",
+    "file": "card-01.png",
+    "source_box": [
+      173,
+      132,
+      240,
+      225
+    ]
+  },
+  {
+    "id": 2,
+    "rank": "3",
+    "suit": "diamonds",
+    "file": "card-02.png",
+    "source_box": [
+      173,
+      21,
+      240,
+      114
+    ]
+  },
+  {
+    "id": 3,
+    "rank": "3",
+    "suit": "hearts",
+    "file": "card-03.png",
+    "source_box": [
+      173,
+      243,
+      240,
+      337
+    ]
+  },
+  {
+    "id": 4,
+    "rank": "4",
+    "suit": "spades",
+    "file": "card-04.png",
+    "source_box": [
+      250,
+      355,
+      316,
+      448
+    ]
+  },
+  {
+    "id": 5,
+    "rank": "4",
+    "suit": "clubs",
+    "file": "card-05.png",
+    "source_box": [
+      250,
+      132,
+      316,
+      225
+    ]
+  },
+  {
+    "id": 6,
+    "rank": "4",
+    "suit": "diamonds",
+    "file": "card-06.png",
+    "source_box": [
+      250,
+      21,
+      316,
+      114
+    ]
+  },
+  {
+    "id": 7,
+    "rank": "4",
+    "suit": "hearts",
+    "file": "card-07.png",
+    "source_box": [
+      250,
+      243,
+      316,
+      337
+    ]
+  },
+  {
+    "id": 8,
+    "rank": "5",
+    "suit": "spades",
+    "file": "card-08.png",
+    "source_box": [
+      326,
+      355,
+      393,
+      448
+    ]
+  },
+  {
+    "id": 9,
+    "rank": "5",
+    "suit": "clubs",
+    "file": "card-09.png",
+    "source_box": [
+      326,
+      132,
+      393,
+      225
+    ]
+  },
+  {
+    "id": 10,
+    "rank": "5",
+    "suit": "diamonds",
+    "file": "card-10.png",
+    "source_box": [
+      326,
+      21,
+      393,
+      114
+    ]
+  },
+  {
+    "id": 11,
+    "rank": "5",
+    "suit": "hearts",
+    "file": "card-11.png",
+    "source_box": [
+      326,
+      243,
+      393,
+      337
+    ]
+  },
+  {
+    "id": 12,
+    "rank": "6",
+    "suit": "spades",
+    "file": "card-12.png",
+    "source_box": [
+      402,
+      355,
+      469,
+      448
+    ]
+  },
+  {
+    "id": 13,
+    "rank": "6",
+    "suit": "clubs",
+    "file": "card-13.png",
+    "source_box": [
+      402,
+      132,
+      469,
+      225
+    ]
+  },
+  {
+    "id": 14,
+    "rank": "6",
+    "suit": "diamonds",
+    "file": "card-14.png",
+    "source_box": [
+      402,
+      21,
+      469,
+      114
+    ]
+  },
+  {
+    "id": 15,
+    "rank": "6",
+    "suit": "hearts",
+    "file": "card-15.png",
+    "source_box": [
+      402,
+      243,
+      469,
+      337
+    ]
+  },
+  {
+    "id": 16,
+    "rank": "7",
+    "suit": "spades",
+    "file": "card-16.png",
+    "source_box": [
+      478,
+      355,
+      545,
+      448
+    ]
+  },
+  {
+    "id": 17,
+    "rank": "7",
+    "suit": "clubs",
+    "file": "card-17.png",
+    "source_box": [
+      479,
+      132,
+      545,
+      225
+    ]
+  },
+  {
+    "id": 18,
+    "rank": "7",
+    "suit": "diamonds",
+    "file": "card-18.png",
+    "source_box": [
+      478,
+      21,
+      545,
+      114
+    ]
+  },
+  {
+    "id": 19,
+    "rank": "7",
+    "suit": "hearts",
+    "file": "card-19.png",
+    "source_box": [
+      478,
+      243,
+      545,
+      337
+    ]
+  },
+  {
+    "id": 20,
+    "rank": "8",
+    "suit": "spades",
+    "file": "card-20.png",
+    "source_box": [
+      555,
+      355,
+      622,
+      448
+    ]
+  },
+  {
+    "id": 21,
+    "rank": "8",
+    "suit": "clubs",
+    "file": "card-21.png",
+    "source_box": [
+      555,
+      132,
+      621,
+      225
+    ]
+  },
+  {
+    "id": 22,
+    "rank": "8",
+    "suit": "diamonds",
+    "file": "card-22.png",
+    "source_box": [
+      555,
+      21,
+      622,
+      114
+    ]
+  },
+  {
+    "id": 23,
+    "rank": "8",
+    "suit": "hearts",
+    "file": "card-23.png",
+    "source_box": [
+      555,
+      243,
+      621,
+      337
+    ]
+  },
+  {
+    "id": 24,
+    "rank": "9",
+    "suit": "spades",
+    "file": "card-24.png",
+    "source_box": [
+      631,
+      355,
+      698,
+      448
+    ]
+  },
+  {
+    "id": 25,
+    "rank": "9",
+    "suit": "clubs",
+    "file": "card-25.png",
+    "source_box": [
+      631,
+      132,
+      698,
+      225
+    ]
+  },
+  {
+    "id": 26,
+    "rank": "9",
+    "suit": "diamonds",
+    "file": "card-26.png",
+    "source_box": [
+      631,
+      21,
+      698,
+      114
+    ]
+  },
+  {
+    "id": 27,
+    "rank": "9",
+    "suit": "hearts",
+    "file": "card-27.png",
+    "source_box": [
+      631,
+      243,
+      698,
+      337
+    ]
+  },
+  {
+    "id": 28,
+    "rank": "10",
+    "suit": "spades",
+    "file": "card-28.png",
+    "source_box": [
+      707,
+      355,
+      774,
+      448
+    ]
+  },
+  {
+    "id": 29,
+    "rank": "10",
+    "suit": "clubs",
+    "file": "card-29.png",
+    "source_box": [
+      707,
+      132,
+      774,
+      225
+    ]
+  },
+  {
+    "id": 30,
+    "rank": "10",
+    "suit": "diamonds",
+    "file": "card-30.png",
+    "source_box": [
+      707,
+      21,
+      774,
+      114
+    ]
+  },
+  {
+    "id": 31,
+    "rank": "10",
+    "suit": "hearts",
+    "file": "card-31.png",
+    "source_box": [
+      707,
+      243,
+      774,
+      337
+    ]
+  },
+  {
+    "id": 32,
+    "rank": "J",
+    "suit": "spades",
+    "file": "card-32.png",
+    "source_box": [
+      784,
+      355,
+      850,
+      448
+    ]
+  },
+  {
+    "id": 33,
+    "rank": "J",
+    "suit": "clubs",
+    "file": "card-33.png",
+    "source_box": [
+      784,
+      132,
+      850,
+      225
+    ]
+  },
+  {
+    "id": 34,
+    "rank": "J",
+    "suit": "diamonds",
+    "file": "card-34.png",
+    "source_box": [
+      784,
+      21,
+      850,
+      114
+    ]
+  },
+  {
+    "id": 35,
+    "rank": "J",
+    "suit": "hearts",
+    "file": "card-35.png",
+    "source_box": [
+      784,
+      243,
+      850,
+      337
+    ]
+  },
+  {
+    "id": 36,
+    "rank": "Q",
+    "suit": "spades",
+    "file": "card-36.png",
+    "source_box": [
+      860,
+      355,
+      927,
+      448
+    ]
+  },
+  {
+    "id": 37,
+    "rank": "Q",
+    "suit": "clubs",
+    "file": "card-37.png",
+    "source_box": [
+      860,
+      132,
+      927,
+      225
+    ]
+  },
+  {
+    "id": 38,
+    "rank": "Q",
+    "suit": "diamonds",
+    "file": "card-38.png",
+    "source_box": [
+      860,
+      21,
+      927,
+      114
+    ]
+  },
+  {
+    "id": 39,
+    "rank": "Q",
+    "suit": "hearts",
+    "file": "card-39.png",
+    "source_box": [
+      860,
+      243,
+      927,
+      337
+    ]
+  },
+  {
+    "id": 40,
+    "rank": "K",
+    "suit": "spades",
+    "file": "card-40.png",
+    "source_box": [
+      936,
+      355,
+      1003,
+      448
+    ]
+  },
+  {
+    "id": 41,
+    "rank": "K",
+    "suit": "clubs",
+    "file": "card-41.png",
+    "source_box": [
+      936,
+      132,
+      1003,
+      225
+    ]
+  },
+  {
+    "id": 42,
+    "rank": "K",
+    "suit": "diamonds",
+    "file": "card-42.png",
+    "source_box": [
+      936,
+      21,
+      1003,
+      114
+    ]
+  },
+  {
+    "id": 43,
+    "rank": "K",
+    "suit": "hearts",
+    "file": "card-43.png",
+    "source_box": [
+      936,
+      243,
+      1003,
+      337
+    ]
+  },
+  {
+    "id": 44,
+    "rank": "A",
+    "suit": "spades",
+    "file": "card-44.png",
+    "source_box": [
+      21,
+      355,
+      87,
+      448
+    ]
+  },
+  {
+    "id": 45,
+    "rank": "A",
+    "suit": "clubs",
+    "file": "card-45.png",
+    "source_box": [
+      21,
+      132,
+      87,
+      225
+    ]
+  },
+  {
+    "id": 46,
+    "rank": "A",
+    "suit": "diamonds",
+    "file": "card-46.png",
+    "source_box": [
+      21,
+      21,
+      87,
+      114
+    ]
+  },
+  {
+    "id": 47,
+    "rank": "A",
+    "suit": "hearts",
+    "file": "card-47.png",
+    "source_box": [
+      21,
+      243,
+      87,
+      337
+    ]
+  },
+  {
+    "id": 48,
+    "rank": "2",
+    "suit": "spades",
+    "file": "card-48.png",
+    "source_box": [
+      97,
+      355,
+      164,
+      448
+    ]
+  },
+  {
+    "id": 49,
+    "rank": "2",
+    "suit": "clubs",
+    "file": "card-49.png",
+    "source_box": [
+      97,
+      132,
+      164,
+      225
+    ]
+  },
+  {
+    "id": 50,
+    "rank": "2",
+    "suit": "diamonds",
+    "file": "card-50.png",
+    "source_box": [
+      97,
+      21,
+      164,
+      114
+    ]
+  },
+  {
+    "id": 51,
+    "rank": "2",
+    "suit": "hearts",
+    "file": "card-51.png",
+    "source_box": [
+      97,
+      243,
+      164,
+      337
+    ]
+  }
+]

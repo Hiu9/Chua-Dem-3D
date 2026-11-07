@@ -14,11 +14,16 @@
 <script defer src="world.js"></script>
 <script defer src="caro.js"></script>
 <script defer src="online.js"></script>
+<script defer src="tienlen-rules.js"></script>
+<script defer src="social.js"></script>
+<script defer src="caro-online.js"></script>
 <script defer src="game.js"></script>
 </head>
 <body>
 <main id="game">
   <audio id="background-music" src="assets/background-music.mp3" preload="none" loop></audio>
+  <audio id="coaster-audio" src="assets/coaster.mp3" preload="none" loop></audio>
+  <audio id="completion" src="assets/completion.mp3" preload="auto"></audio>
   <audio id="wooden-fish" src="assets/wooden-fish.mp3" preload="auto"></audio>
   <div id="view" aria-label="Thế giới 3D của game Chùa Đêm"></div>
   <header class="top">
@@ -26,12 +31,14 @@
     <div class="top-buttons">
       <button id="sound" type="button" aria-pressed="false" title="Bật hoặc tắt hiệu ứng âm thanh">◖ <span>Hiệu ứng</span></button>
       <button id="music" type="button" aria-pressed="false" title="Bật hoặc tắt nhạc nền">♫ <span>Nhạc nền</span></button>
+      <div id="music-menu" hidden class="music-menu"><button data-track="background-music">Nhạc chùa</button><button data-track="chill">Nhạc chill</button><button id="music-off">Tắt nhạc</button></div>
+      <button id="chat-open" type="button">Chat</button>
       <button id="edit" type="button">Nhân vật</button>
       <button id="room-open" type="button">Chơi chung</button>
     </div>
   </header>
   <aside class="journal" id="journal">
-    <div class="journal-title"><span>NHẬT KÝ GHÉ CHÙA</span><strong id="count">0/10</strong></div>
+    <div class="journal-title" title="10 nhiệm vụ làm mới lúc 00:00 mỗi ngày theo giờ Việt Nam"><span>NHẬT KÝ HÔM NAY</span><strong id="count">0/10</strong></div>
     <p id="guide">Qua cổng và làm quen với Thích Trung Hiếu ở sân chùa.</p>
     <ul id="tasks"><li data-task="meet">Trò chuyện với Thích Trung Hiếu</li><li data-task="lotus">Thắp đèn sen</li><li data-task="bell">Gõ mõ 3 lần</li><li data-task="breath">Hít thở một vòng</li><li data-task="incense">Dâng hương</li><li data-task="escort">Theo Thích Trung Hiếu đến ao cá</li><li data-task="fish">Câu được một con cá</li><li data-task="meditate">Ngồi thiền trong chánh điện</li><li data-task="caro">Hoàn thành một ván caro</li><li data-task="coaster">Đi trọn vòng tàu lượn</li></ul>
   </aside>
@@ -90,6 +97,23 @@
       <button type="button" class="back" id="room-close">Đóng</button>
     </form>
   </dialog>
+  <dialog id="cards-dialog" class="panel cards-panel">
+    <p class="eyebrow">BUI'S HOUSE · TIẾN LÊN MIỀN NAM</p><h2>Bàn bài an vui</h2>
+    <div id="cards-menu"><button id="cards-npc" class="primary">Chơi với 3 NPC · 4 tụ</button><button id="cards-online" class="choice">Chơi với người cùng phòng</button></div>
+    <p id="cards-status" role="status"></p><div id="cards-seats"></div><div id="cards-table"></div><div id="cards-hand" aria-label="Bài trên tay"></div>
+    <div class="card-actions"><button id="cards-play">Đánh bài đã chọn</button><button id="cards-pass">Bỏ lượt</button><button id="cards-start">Bắt đầu / Ván mới</button><button id="cards-leave">Rời bàn</button></div>
+    <details><summary>Luật bàn này</summary><p>52 lá, mỗi người 13 lá. Thứ tự 3 đến 2; chất ♠ &lt; ♣ &lt; ♦ &lt; ♥. Ván mới người có 3♠ đi trước và đánh kèm lá đó. Đánh rác, đôi, sám, sảnh từ 3 lá (không có 2), tứ quý hoặc đôi thông từ 3 đôi. Bộ cùng loại và cùng số lá lớn hơn được chặn. Ba đôi thông hoặc tứ quý chặt một heo; tứ quý chặt ba đôi thông. Bốn đôi thông chặt heo đơn, đôi heo, ba đôi thông và tứ quý; vẫn phải đúng lượt. Bỏ lượt thì chờ vòng mới. Hết bài được xếp hạng, chơi đến khi còn một người. Không áp dụng tới trắng, đút mù, phạt thối hay tiền cược.</p></details>
+    <button id="cards-close" class="back">Đóng · giữ chỗ</button>
+  </dialog>
+  <dialog id="caro-online-dialog" class="panel caro-online-panel">
+    <p class="eyebrow">VƯỜN CỜ · 1 ĐẤU 1 CÙNG PHÒNG</p><h2>Caro với bạn bè</h2>
+    <p id="caro-online-status" role="status"></p><p id="caro-online-players"></p>
+    <div id="caro-online-grid" class="caro-grid" aria-label="Caro trực tuyến 13 nhân 13"></div>
+    <button id="caro-rematch" class="choice" hidden>Sẵn sàng ván mới</button>
+    <button id="caro-online-leave" class="choice">Rời bàn</button><button id="caro-online-close" class="back">Đóng · giữ chỗ</button>
+    <p class="caro-note">X đi trước. Nối ít nhất 5 quân theo hàng, cột hoặc đường chéo để thắng; không xét chặn hai đầu. Một bàn 2 người trong mỗi phòng.</p>
+  </dialog>
+  <section id="chat-panel" hidden aria-label="Chat cùng phòng"><header><strong>Chat cùng phòng</strong><button id="chat-close" aria-label="Đóng chat">×</button></header><p id="chat-status">Vào Chơi chung để chat với bạn bè.</p><div id="chat-log" role="log" aria-live="polite"></div><form id="chat-form"><input id="chat-input" placeholder="Nhập tin nhắn…" maxlength="240" aria-label="Tin nhắn"><button>Gửi</button></form></section>
   <noscript>Hãy bật JavaScript để chơi Chùa Đêm 3D.</noscript>
 </main>
 </body>

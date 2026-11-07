@@ -101,3 +101,6 @@ function playCaro(onFinish, buttonEvent) {
   buttonEvent.currentTarget.parentElement.replaceChildren(caption, grid, restart);
   cells[Math.floor(board.length / 2)].focus();
 }
+
+// Reuse exactly the same win condition on the room server.
+if(typeof module!=='undefined'&&module.exports)module.exports={caroSize,caroWins};

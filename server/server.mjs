@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { WebSocket, WebSocketServer } from 'ws';
 import rideConfig from '../ride-config.js';
+import TienLen from '../tienlen-rules.js';
+import caroRules from '../caro.js';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const rooms = new Map();
@@ -17,7 +19,7 @@ const roomCode = /^[A-Z0-9-]{3,16}$/;
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean);
 const types = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.mp3': 'audio/mpeg'
+  '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8', '.mp3': 'audio/mpeg'
 };
 const server = createServer(async (req, res) => {
   const path = new URL(req.url, 'http://localhost').pathname;
@@ -26,7 +28,7 @@ const server = createServer(async (req, res) => {
     res.end(JSON.stringify({ ok: true, rooms: rooms.size, players: [...rooms.values()].reduce((sum, room) => sum + room.players.size, 0) }));
     return;
   }
-  if (!['GET', 'HEAD'].includes(req.method) || !/^(?:\/|\/[\w-]+\.(?:html|css|js)|\/vendor\/[\w.-]+\.(?:js|txt)|\/assets\/(?:background-music|wooden-fish)\.mp3)$/.test(path)) {
+  if (!['GET', 'HEAD'].includes(req.method) || !/^(?:\/|\/[\w-]+\.(?:html|css|js)|\/vendor\/[\w.-]+\.(?:js|txt)|\/assets\/(?:background-music|wooden-fish|completion|chill|coaster)\.mp3|\/assets\/cards\/card-\d{2}\.png)$/.test(path)) {
     res.writeHead(404).end();
     return;
   }
@@ -63,6 +65,30 @@ const server = createServer(async (req, res) => {
     else createReadStream(file, streamOptions).on('error', () => res.destroy()).pipe(res);
   } catch { res.writeHead(404).end(); }
 });
+function cardState(room) {
+  const table=room.cards;if(!table)return;
+  table.ids.forEach((id,seat)=>{const p=room.players.get(id);if(!p)return;const g=table.game;
+    send(p.socket,{type:'cards_state',seat,host:table.ids.findIndex(Boolean),seats:table.ids.map(id=>room.players.get(id)?.name||null),hand:g?.hands[seat]||[],counts:g?.hands.map(h=>h.length)||[0,0,0,0],turn:g?.turn??-1,lead:g?.lead,table:g?.table||[],passed:g?.passed||[],finished:g?.finished||[],over:g?.over||false,notice:table.notice||g?.notice||'Chờ đủ 4 người; người ngồi đầu tiên bấm Bắt đầu.'});
+  });
+}
+function leaveCards(room,player) {
+  const t=room.cards;if(!t)return;const i=t.ids.indexOf(player.id);if(i<0)return;
+  t.ids[i]=null;t.game=null;t.notice='Có người rời bàn. Ván đã hủy, chờ đủ 4 người để chia lại.';
+  if(t.ids.some(Boolean))cardState(room);else room.cards=null;
+}
+function caroState(room) {
+  const t=room.caro;if(!t)return;
+  t.ids.forEach((id,seat)=>{const p=room.players.get(id);if(p)send(p.socket,{type:'caro_state',seat,names:t.ids.map(id=>room.players.get(id)?.name||null),board:t.board,turn:t.turn,status:t.status,round:t.round,winner:t.winner,ready:[...t.ready],notice:t.notice});});
+}
+function startCaro(t) {
+  t.board=Array(169).fill(0);t.turn=1;t.status='playing';t.winner=null;t.round=randomUUID();t.ready=new Set();t.notice='Đến lượt X. Nối ít nhất 5 quân liền nhau để thắng.';
+}
+function leaveCaro(room,player) {
+  const t=room.caro;if(!t)return;const i=t.ids.indexOf(player.id);if(i<0)return;
+  t.ids[i]=null;
+  if(!t.ids.some(Boolean)){room.caro=null;return;}
+  t.board=Array(169).fill(0);t.turn=0;t.status='waiting';t.winner=null;t.ready=new Set();t.notice='Đối thủ đã rời bàn. Ván đã hủy, đang chờ người chơi mới.';caroState(room);
+}
 const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 });
 const send = (socket, message) => {
   if (socket.readyState === WebSocket.OPEN && socket.bufferedAmount < 262144) {
@@ -127,6 +153,65 @@ wss.on('connection', (socket) => {
       return;
     }
     if (!player) return;
+    if (msg.type === 'chat' && typeof msg.text === 'string') {
+      if(now-(player.lastChat||0)<900)return;
+      const text=msg.text.replace(/[\x00-\x1f\x7f]/g,' ').trim().slice(0,240);
+      if(text){player.lastChat=now;for(const p of room.players.values())send(p.socket,{type:'chat',name:player.name,text});}
+    }
+    if (msg.type === 'caro_join') {
+      if(Math.hypot(player.x+20.1,player.z-4.65)>5){send(socket,{type:'caro_error',text:'Hãy đến bàn caro của Thích Thể Hiện trước.'});return;}
+      room.caro ||= {ids:[null,null],board:Array(169).fill(0),turn:0,status:'waiting',round:null,winner:null,ready:new Set(),notice:'Chờ một người cùng phòng đến bàn cờ.'};
+      const t=room.caro;
+      if(!t.ids.includes(player.id)){
+        const i=t.ids.indexOf(null);if(i<0){send(socket,{type:'caro_error',text:'Bàn caro đã đủ 2 người. Đóng và thử lại khi có chỗ.'});return;}
+        t.ids[i]=player.id;
+        if(t.ids.every(Boolean))startCaro(t);
+      }
+      caroState(room);
+    }
+    if(msg.type==='caro_leave')leaveCaro(room,player);
+    if(msg.type==='caro_move') {
+      const t=room.caro,i=t?.ids.indexOf(player.id),cell=msg.index;
+      if(!t||i<0)return;
+      if(t.status!=='playing'||t.turn!==i+1||!Number.isInteger(cell)||cell<0||cell>=169||t.board[cell]){send(socket,{type:'caro_error',text:'Nước đi không hợp lệ hoặc chưa đến lượt bạn.'});return;}
+      t.board[cell]=i+1;
+      if(caroRules.caroWins(t.board,cell,i+1)){
+        t.status='finished';t.winner=i+1;t.turn=0;t.notice=(i?'O':'X')+' thắng ván này! Cả hai bấm Sẵn sàng để chơi tiếp.';
+      }else if(t.board.every(Boolean)){
+        t.status='finished';t.winner=0;t.turn=0;t.notice='Ván cờ hòa. Cả hai bấm Sẵn sàng để chơi tiếp.';
+      }else{t.turn=i===0?2:1;t.notice='Đến lượt '+(t.turn===1?'X':'O')+'.';}
+      caroState(room);
+    }
+    if(msg.type==='caro_rematch') {
+      const t=room.caro,i=t?.ids.indexOf(player.id);
+      if(t&&i>=0&&t.status==='finished'&&t.ids.every(Boolean)){
+        t.ready.add(i);t.notice='Đang chờ cả hai người sẵn sàng.';
+        if(t.ready.size===2)startCaro(t);
+        caroState(room);
+      }
+    }
+    if (msg.type === 'cards_join') {
+      if(Math.hypot(player.x-17,player.z+46)>9){send(socket,{type:'cards_error',text:'Hãy đến Bui’s House gần ao cá trước.'});return;}
+      room.cards ||= {ids:[null,null,null,null],game:null};
+      const t=room.cards;
+      if(!t.ids.includes(player.id)){
+        const i=t.ids.indexOf(null);if(i<0){send(socket,{type:'cards_error',text:'Bàn đã đủ 4 người.'});return;}
+        t.ids[i]=player.id;t.notice='Chờ đủ 4 người để bắt đầu.';
+      }
+      cardState(room);
+    }
+    if(msg.type==='cards_leave')leaveCards(room,player);
+    if(msg.type==='cards_start'){
+      const t=room.cards;
+      if(t&&t.ids[t.ids.findIndex(Boolean)]===player.id&&t.ids.every(Boolean)&&(!t.game||t.game.over)){
+        t.game=TienLen.create();t.notice=null;t.lastAction=now;cardState(room);
+      }
+    }
+    if(msg.type==='cards_action'){
+      const t=room.cards;if(!t?.game)return;const i=t.ids.indexOf(player.id);
+      const error=TienLen.act(t.game,i,msg.cards);
+      if(error)send(socket,{type:'cards_error',text:error});else{t.notice=null;t.lastAction=now;cardState(room);}
+    }
     if (msg.type === 'pose') {
       if (![msg.x, msg.z, msg.angle].every(Number.isFinite) || Math.abs(msg.x) > 33 || msg.z < -59 || msg.z > 27) return;
       player.x = Math.round(msg.x * 100) / 100;
@@ -160,6 +245,8 @@ wss.on('connection', (socket) => {
     clearTimeout(joinTimeout);
     if (!player) return;
     clearClaim(player, room);
+    leaveCards(room, player);
+    leaveCaro(room, player);
     room.players.delete(player.id);
     if (!room.players.size) rooms.delete(code);
   });
@@ -169,6 +256,11 @@ setInterval(() => {
   const now = Date.now();
   for (const room of rooms.values()) {
     expireRide(room, now);
+    // A stalled player cannot hold the shared table indefinitely.
+    if(room.cards?.game&&!room.cards.game.over&&now-room.cards.lastAction>45000){
+      const t=room.cards,g=t.game;
+      TienLen.act(g,g.turn,g.lead?[]:TienLen.bot(g));t.lastAction=now;t.notice='Hết 45 giây: máy chủ tự xử lý lượt.';cardState(room);
+    }
     const list = [];
     for (const p of room.players.values()) {
       list.push([p.id, p.x, p.z, p.angle, p.outfit, p.name, p.claim]);
