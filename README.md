@@ -1,3 +1,23 @@
+# Bản cập nhật V4 · Tiến lên người thật cùng NPC
+
+Chế độ chơi Tiến lên cùng phòng giờ chỉ cần ít nhất **2 người thật ngồi vào bàn**. Khi chủ bàn bấm **Bắt đầu / Ván mới**, máy chủ chia đủ 4 tụ:
+
+| Người thật tại bàn | NPC tự thêm |
+| --- | --- |
+| 2 | 2 |
+| 3 | 1 |
+| 4 | 0 |
+
+Mọi người vào cùng phòng, tới Bui's House và chọn **Chơi cùng phòng · 2–4 người + NPC**. Mời đủ số bạn muốn chơi, rồi người ngồi đầu tiên bấm Bắt đầu. Chỉ tính người đã ngồi vào bàn, không tính những người đang ở chỗ khác trong phòng. Nếu chơi một mình, dùng chế độ Chơi với 3 NPC như trước.
+
+NPC do máy chủ điều khiển, đánh/bỏ đúng lượt, có tên rõ trên ghế; bài của NPC không được gửi cho người thật. Người mới đến khi đang chơi chờ hết ván, sau đó có thể vào ghế trống và thay NPC ở ván kế tiếp. Sau mỗi lần bắt đầu, số NPC được tính lại theo số người thật tại bàn. Nếu người thật rời bàn/mất kết nối, giữ cách xử lý cũ: hủy ván, người còn lại chia lại khi có ít nhất 2 người thật. Chủ bàn được chuyển cho người còn ngồi ở ghế đầu tiên.
+
+Đã kiểm tra chạy hết ván với cả 2, 3 và 4 người thật; kiểm tra người đến giữa ván, vào thay NPC sau ván, chủ bàn mất kết nối, đổi chủ bàn, bài riêng từng người và nút Bắt đầu trên giao diện mô phỏng.
+
+Để cập nhật, tải toàn bộ nội dung ZIP lên GitHub, bao gồm **server/server.mjs**, **social.js** và **index.html**. Chờ Render triển khai bản mới, rồi tất cả người chơi nhấn Ctrl + F5. Chưa cập nhật dịch vụ đang chạy của bạn.
+
+---
+
 # Bản cập nhật V3 · Nhiệm vụ hằng ngày
 
 - Toàn bộ 10 nhiệm vụ tự làm mới lúc **00:00 theo giờ Việt Nam (UTC+7)**. Khi game đang mở, kiểm tra mỗi giây; khi quay lại tab hoặc mở game vào ngày mới, tiến độ cũng được làm mới. Tên và diện mạo nhân vật được giữ lại.

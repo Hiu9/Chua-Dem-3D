@@ -14,13 +14,13 @@ function createSocial({online,notify,clearMovement}) {
   function render(){
     el('cards-menu').hidden=!!mode;
     const s=mode==='npc'&&game?localState():state;
-    el('cards-status').textContent=s ? (s.notice||'')+(s.over?' · Thứ hạng: '+s.finished.map(i=>s.seats[i]).join(' → '):s.turn>=0?' · Lượt: '+s.seats[s.turn]:' · Chờ đủ 4 người') : 'Chọn chế độ chơi. Bàn trực tuyến có 4 ghế trong mỗi phòng.';
+    el('cards-status').textContent=s ? (s.notice||'')+(s.over?' · Thứ hạng: '+s.finished.map(i=>s.seats[i]).join(' → '):s.turn>=0?' · Lượt: '+s.seats[s.turn]:' · Chờ bắt đầu') : 'Chọn chế độ chơi. Bàn trực tuyến cần 2–4 người thật; NPC tự lấp các ghế còn thiếu.';
     el('cards-seats').replaceChildren();el('cards-hand').replaceChildren();el('cards-table').replaceChildren();
     if(s){s.seats.forEach((name,i)=>{const d=document.createElement('div');d.className='card-seat'+(s.turn===i?' current':'');d.textContent=(name||'Ghế trống')+(i===s.seat?' · Bạn':'')+' · '+(s.counts?.[i]??0)+' lá'+(s.passed?.includes(i)?' · Bỏ lượt':'');el('cards-seats').append(d);});(s.table||[]).forEach(c=>el('cards-table').append(card(c)));(s.hand||[]).forEach(c=>el('cards-hand').append(card(c,true)));}
     const myTurn=s&&s.turn===s.seat&&!s.over;
     el('cards-play').disabled=!myTurn||!selected.size;el('cards-pass').disabled=!myTurn||!s.lead;
     el('cards-start').hidden=!mode;el('cards-leave').hidden=!mode;
-    el('cards-start').disabled=mode==='online' ? !s || s.seat!==s.host || s.seats.some(x=>!x) || (s.turn>=0&&!s.over) : !!game&&!game.over;
+    el('cards-start').disabled=mode==='online' ? !s || s.seat!==s.host || (s.humanCount ?? s.seats.filter(Boolean).length)<2 || (s.turn>=0&&!s.over) : !!game&&!game.over;
   }
   function step(){clearTimeout(timer);render();if(mode==='npc'&&game&&!game.over&&game.turn!==0){timer=setTimeout(()=>{const cs=TienLen.bot(game);const error=TienLen.act(game,game.turn,cs);if(error){say(error);return;}step();},750);}}
   function leave(){clearTimeout(timer);if(mode==='online')online.send({type:'cards_leave'});mode=null;game=null;state=null;selected.clear();render();}

@@ -66,15 +66,48 @@ const server = createServer(async (req, res) => {
   } catch { res.writeHead(404).end(); }
 });
 function cardState(room) {
-  const table=room.cards;if(!table)return;
-  table.ids.forEach((id,seat)=>{const p=room.players.get(id);if(!p)return;const g=table.game;
-    send(p.socket,{type:'cards_state',seat,host:table.ids.findIndex(Boolean),seats:table.ids.map(id=>room.players.get(id)?.name||null),hand:g?.hands[seat]||[],counts:g?.hands.map(h=>h.length)||[0,0,0,0],turn:g?.turn??-1,lead:g?.lead,table:g?.table||[],passed:g?.passed||[],finished:g?.finished||[],over:g?.over||false,notice:table.notice||g?.notice||'Chờ đủ 4 người; người ngồi đầu tiên bấm Bắt đầu.'});
+  const t = room.cards;
+  if (!t) return;
+  const g = t.game;
+  const humanCount = t.ids.filter(Boolean).length;
+  const bots = t.ids.map((id, i) => Boolean(g && !id && t.bots?.[i]));
+  const seats = t.ids.map((id, i) => room.players.get(id)?.name || (bots[i] ? ['NPC An', 'NPC Bình', 'NPC Chi', 'NPC Dũng'][i] : null));
+  t.ids.forEach((id, seat) => {
+    const p = room.players.get(id);
+    if (!p) return;
+    send(p.socket, {
+      type: 'cards_state', seat, host: t.ids.findIndex(Boolean), humanCount, bots, seats,
+      hand: g?.hands[seat] || [], counts: g?.hands.map(h => h.length) || [0, 0, 0, 0],
+      turn: g?.turn ?? -1, lead: g?.lead, table: g?.table || [], passed: g?.passed || [],
+      finished: g?.finished || [], over: g?.over || false,
+      notice: t.notice || g?.notice || (humanCount < 2
+        ? 'Chờ ít nhất 2 người thật để bắt đầu.'
+        : 'Chủ bàn bấm Bắt đầu; NPC tự lấp các ghế còn trống.')
+    });
   });
 }
-function leaveCards(room,player) {
-  const t=room.cards;if(!t)return;const i=t.ids.indexOf(player.id);if(i<0)return;
-  t.ids[i]=null;t.game=null;t.notice='Có người rời bàn. Ván đã hủy, chờ đủ 4 người để chia lại.';
-  if(t.ids.some(Boolean))cardState(room);else room.cards=null;
+function leaveCards(room, player) {
+  const t = room.cards;
+  if (!t) return;
+  const i = t.ids.indexOf(player.id);
+  if (i < 0) return;
+  t.ids[i] = null;
+  t.game = null;
+  t.bots = [];
+  t.notice = 'Có người rời bàn. Ván đã hủy; cần ít nhất 2 người thật để chia lại, NPC sẽ lấp ghế thiếu.';
+  if (t.ids.some(Boolean)) cardState(room);
+  else room.cards = null;
+}
+function advanceCards(room, now) {
+  const t = room.cards, g = t?.game;
+  if (!g || g.over) return;
+  const botTurn = Boolean(t.bots?.[g.turn]);
+  if (now - t.lastAction < (botTurn ? 750 : 45000)) return;
+  const error = TienLen.act(g, g.turn, botTurn || !g.lead ? TienLen.bot(g) : []);
+  if (error) return;
+  t.lastAction = now;
+  t.notice = botTurn ? null : 'Hết 45 giây: máy chủ tự xử lý lượt.';
+  cardState(room);
 }
 function caroState(room) {
   const t=room.caro;if(!t)return;
@@ -191,26 +224,52 @@ wss.on('connection', (socket) => {
       }
     }
     if (msg.type === 'cards_join') {
-      if(Math.hypot(player.x-17,player.z+46)>9){send(socket,{type:'cards_error',text:'Hãy đến Bui’s House gần ao cá trước.'});return;}
-      room.cards ||= {ids:[null,null,null,null],game:null};
-      const t=room.cards;
-      if(!t.ids.includes(player.id)){
-        const i=t.ids.indexOf(null);if(i<0){send(socket,{type:'cards_error',text:'Bàn đã đủ 4 người.'});return;}
-        t.ids[i]=player.id;t.notice='Chờ đủ 4 người để bắt đầu.';
+      if (Math.hypot(player.x - 17, player.z + 46) > 9) {
+        send(socket, { type: 'cards_error', text: 'Hãy đến Bui’s House gần ao cá trước.' });
+        return;
+      }
+      room.cards ||= { ids: [null, null, null, null], game: null, bots: [] };
+      const t = room.cards;
+      if (!t.ids.includes(player.id)) {
+        if (t.game && !t.game.over) {
+          send(socket, { type: 'cards_error', text: 'Bàn đang chơi. Hãy chờ hết ván để tham gia; NPC giữ ghế đến hết ván.' });
+          return;
+        }
+        const i = t.ids.indexOf(null);
+        if (i < 0) {
+          send(socket, { type: 'cards_error', text: 'Bàn đã đủ 4 người.' });
+          return;
+        }
+        t.ids[i] = player.id;
+        t.game = null;
+        t.bots = [];
+        t.notice = null;
       }
       cardState(room);
     }
-    if(msg.type==='cards_leave')leaveCards(room,player);
-    if(msg.type==='cards_start'){
-      const t=room.cards;
-      if(t&&t.ids[t.ids.findIndex(Boolean)]===player.id&&t.ids.every(Boolean)&&(!t.game||t.game.over)){
-        t.game=TienLen.create();t.notice=null;t.lastAction=now;cardState(room);
+    if (msg.type === 'cards_leave') leaveCards(room, player);
+    if (msg.type === 'cards_start') {
+      const t = room.cards;
+      if (!t || t.ids[t.ids.findIndex(Boolean)] !== player.id) return;
+      if (t.game && !t.game.over) return;
+      if (t.ids.filter(Boolean).length < 2) {
+        send(socket, { type: 'cards_error', text: 'Cần ít nhất 2 người thật. Nếu chơi một mình, hãy chọn Chơi với 3 NPC.' });
+        return;
       }
+      t.bots = t.ids.map(id => !id);
+      t.game = TienLen.create();
+      t.notice = null;
+      t.lastAction = now;
+      cardState(room);
     }
-    if(msg.type==='cards_action'){
-      const t=room.cards;if(!t?.game)return;const i=t.ids.indexOf(player.id);
-      const error=TienLen.act(t.game,i,msg.cards);
-      if(error)send(socket,{type:'cards_error',text:error});else{t.notice=null;t.lastAction=now;cardState(room);}
+    if (msg.type === 'cards_action') {
+      const t = room.cards;
+      if (!t?.game) return;
+      const i = t.ids.indexOf(player.id);
+      if (i < 0) return;
+      const error = TienLen.act(t.game, i, msg.cards);
+      if (error) send(socket, { type: 'cards_error', text: error });
+      else { t.notice = null; t.lastAction = now; cardState(room); }
     }
     if (msg.type === 'pose') {
       if (![msg.x, msg.z, msg.angle].every(Number.isFinite) || Math.abs(msg.x) > 33 || msg.z < -59 || msg.z > 27) return;
@@ -256,11 +315,7 @@ setInterval(() => {
   const now = Date.now();
   for (const room of rooms.values()) {
     expireRide(room, now);
-    // A stalled player cannot hold the shared table indefinitely.
-    if(room.cards?.game&&!room.cards.game.over&&now-room.cards.lastAction>45000){
-      const t=room.cards,g=t.game;
-      TienLen.act(g,g.turn,g.lead?[]:TienLen.bot(g));t.lastAction=now;t.notice='Hết 45 giây: máy chủ tự xử lý lượt.';cardState(room);
-    }
+    advanceCards(room, now);
     const list = [];
     for (const p of room.players.values()) {
       list.push([p.id, p.x, p.z, p.angle, p.outfit, p.name, p.claim]);
